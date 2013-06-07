@@ -1,8 +1,11 @@
 /*
  * BSD LICENSE
  *
- * Copyright (c) 2011-2012, Intel Corporation
+ * tinycompress utility functions
+ * Copyright (c) 2011-2013, Intel Corporation
  * All rights reserved.
+ *
+ * Author: Vinod Koul <vinod.koul@intel.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -30,9 +33,8 @@
  *
  * LGPL LICENSE
  *
- * tinycompress library for compress audio offload in alsa
- * Copyright (c) 2011-2012, Intel Corporation.
- *
+ * tinycompress utility functions
+ * Copyright (c) 2011-2013, Intel Corporation
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU Lesser General Public License,
@@ -48,23 +50,47 @@
  * the Free Software Foundation, Inc.,
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  */
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <linux/types.h>
+#include <sys/time.h>
+#define __force
+#define __bitwise
+#define __user
+#include "tinycompress/tinycompress.h"
 
 
-#ifndef __VERSION_H
-#define __VERSION_H
-
-
-#define TINYCOMPRESS_LIB_MAJOR		0 /* major number of library version */
-#define TINYCOMPRESS_LIB_MINOR		2 /* minor number of library version */
-#define TINYCOMPRESS_LIB_SUBMINOR	0 /* subminor number of library version */
-
-/** library version */
-#define TINYCOMPRESS_LIB_VERSION \
-		((TINYCOMPRESS_LIB_MAJOR<<16)|\
-		 (TINYCOMPRESS_LIB_MINOR<<8)|\
-		  TINYCOMPRESS_LIB_SUBMINOR)
-
-/** library version (string) */
-#define TINYCOMPRESS_LIB_VERSION_STR	"0.2.0"
-
-#endif
+unsigned int compress_get_alsa_rate(unsigned int rate)
+{
+	switch (rate) {
+	case 5512:
+		return SNDRV_PCM_RATE_5512;
+	case 8000:
+		return SNDRV_PCM_RATE_8000;
+	case 11025:
+		return SNDRV_PCM_RATE_11025;
+	case 16000:
+		return SNDRV_PCM_RATE_16000;
+	case 220500:
+		return SNDRV_PCM_RATE_22050;
+	case 32000:
+		return SNDRV_PCM_RATE_32000;
+	case 44100:
+		return SNDRV_PCM_RATE_44100;
+	case 48000:
+		return SNDRV_PCM_RATE_48000;
+	case 64000:
+		return SNDRV_PCM_RATE_64000;
+	case 88200:
+		return SNDRV_PCM_RATE_88200;
+	case 96000:
+		return SNDRV_PCM_RATE_96000;
+	case 176400:
+		return SNDRV_PCM_RATE_176400;
+	case 192000:
+		return SNDRV_PCM_RATE_192000;
+	default:
+		return 0;
+	}
+}
