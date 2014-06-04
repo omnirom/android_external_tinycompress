@@ -107,7 +107,7 @@ static int oops(struct compress *compress, int e, const char *fmt, ...)
 		": %s", strerror(e));
 	errno = e;
 
-	return -1;
+	return -errno;
 }
 
 const char *compress_get_error(struct compress *compress)
