@@ -67,8 +67,10 @@
 #define __bitwise
 #define __user
 #include "sound/compress_params.h"
+#include "sound/asound.h"
 #include "tinycompress/tinycompress.h"
 #include "tinycompress/tinymp3.h"
+#include <string.h>
 
 static int verbose;
 
@@ -80,6 +82,7 @@ static void usage(void)
 		"-b\tbuffer size\n"
 		"-f\tfragments\n\n"
 		"-v\tverbose mode\n"
+                "-p\tpcm input\n"
 		"-h\tPrints this help list\n\n"
 		"Example:\n"
 		"\tcplay -c 1 -d 2 test.mp3\n"
@@ -90,7 +93,8 @@ static void usage(void)
 
 void play_samples(char *name, unsigned int card, unsigned int device,
 		unsigned long buffer_size, unsigned int frag);
-
+void play_pcm_samples(char *name, unsigned int card, unsigned int device,
+		unsigned long buffer_size, unsigned int frag);
 struct mp3_header {
 	uint16_t sync;
 	uint8_t format1;
@@ -126,6 +130,63 @@ int parse_mp3_header(struct mp3_header *header, unsigned int *num_channels,
 	return 0;
 }
 
+int parse_pcm_header(FILE **file, uint16_t *num_channels,
+		     unsigned int *sample_rate, uint16_t *bit_rate)
+{
+	char title[5] = "    ";
+	int size = 0;
+	fread(title, 4, 1, *file);
+	if (strcmp(title, "RIFF") != 0) {
+		fprintf(stderr, "invalid file\n");
+		return -1;
+	}
+
+	//skip total file size
+	fseek(*file, 4, SEEK_CUR);
+
+	char format[5] = "    ";
+	fread(format, 4, 1, *file);
+	if (strcmp(format, "WAVE") != 0) {
+		fprintf(stderr, "invalid format\n");
+		return -1;
+	}
+
+	fread(title, 4, 1, *file);
+	fread(&size, 4, 1, *file);
+	while (strcmp(title, "fmt ") != 0){
+		fseek(*file, size, SEEK_CUR);
+		fread(title, 4, 1, *file);
+		fread(&size, 4, 1, *file);
+		if (feof(*file)) {
+			fprintf(stderr, "missing format information\n");
+			return -1;
+		}
+	}
+
+	uint16_t audioformat, blockalign;
+	unsigned int byterate;
+	fread(&audioformat, 2, 1, *file);
+	fread(num_channels, 2, 1, *file);
+	fread(sample_rate, 4, 1, *file);
+	fread(&byterate, 4, 1, *file);
+	fread(&blockalign, 2, 1, *file);
+	fread(bit_rate, 2, 1, *file);
+	fseek(*file, size - 16, SEEK_CUR);
+
+	fread(title, 4, 1, *file);
+	fread(&size, 4, 1, *file);
+	while (strcmp(title, "data") != 0){
+		fseek(*file, size, SEEK_CUR);
+		fread(title, 4, 1, *file);
+		fread(&size, 4, 1, *file);
+		if (feof(*file)) {
+			fprintf(stderr, "missing data\n");
+			return -1;
+		}
+	}
+	return 0;
+}
+
 int check_codec_format_supported(unsigned int card, unsigned int device, struct snd_codec *codec)
 {
 	if (is_codec_supported(card, device, COMPRESS_IN, codec) == false) {
@@ -149,19 +210,38 @@ static int print_time(struct compress *compress)
 	return 0;
 }
 
+static int readFromFile2Buffer(char *buffer, FILE** file, int size, uint16_t bits){
+        int num_read = 0;
+        if (bits == 24){
+		int i;
+		int pos = 0;
+		for (i = 0; i < size; i = i + 4) {
+			*(buffer + pos) = 0;
+			pos += 1;
+			num_read += 3 * fread(buffer + pos, 3, 1, *file);
+			pos += 3;
+			num_read += 1;
+		}
+	} else {
+		num_read = fread(buffer, 1, size, *file);
+	}
+
+	return num_read;
+}
+
 int main(int argc, char **argv)
 {
-	char *file;
+        char *file;
 	unsigned long buffer_size = 0;
 	int c;
 	unsigned int card = 0, device = 0, frag = 0;
+        bool pcm = false;
 
-
-	if (argc < 2)
+        if (argc < 2)
 		usage();
 
-	verbose = 0;
-	while ((c = getopt(argc, argv, "hvb:f:c:d:")) != -1) {
+        verbose = 0;
+        while ((c = getopt(argc, argv, "hvpb:f:c:d:")) != -1) {
 		switch (c) {
 		case 'h':
 			usage();
@@ -181,16 +261,23 @@ int main(int argc, char **argv)
 		case 'v':
 			verbose = 1;
 			break;
+		case 'p':
+			pcm = true;
+			break;
 		default:
 			exit(EXIT_FAILURE);
 		}
-	}
+        }
 	if (optind >= argc)
 		usage();
 
 	file = argv[optind];
-
-	play_samples(file, card, device, buffer_size, frag);
+	if (!pcm) {
+		play_samples(file, card, device, buffer_size, frag);
+	} else if (pcm) {
+		fprintf(stderr, "Playing pcm samples\n");
+		play_pcm_samples(file, card, device, buffer_size, frag);
+	}
 
 	fprintf(stderr, "Finish Playing.... Close Normally\n");
 	exit(EXIT_SUCCESS);
@@ -308,6 +395,163 @@ void play_samples(char *name, unsigned int card, unsigned int device,
 			}
 		}
 	} while (num_read > 0);
+
+	if (verbose)
+		printf("%s: exit success\n", __func__);
+	/* issue drain if it supports */
+	compress_drain(compress);
+	free(buffer);
+	fclose(file);
+	compress_close(compress);
+	return;
+BUF_EXIT:
+	free(buffer);
+COMP_EXIT:
+	compress_close(compress);
+FILE_EXIT:
+	fclose(file);
+	if (verbose)
+		printf("%s: exit failure\n", __func__);
+	exit(EXIT_FAILURE);
+}
+
+void play_pcm_samples(char *name, unsigned int card, unsigned int device,
+		      unsigned long buffer_size, unsigned int frag)
+{
+	struct compr_config config;
+	struct snd_codec codec;
+	struct compress *compress;
+	struct mp3_header header;
+	FILE *file;
+	char *buffer;
+	int frag_size, num_read, wrote;
+	unsigned int rate, byterate;
+	uint16_t channels, bits;
+
+	if (verbose)
+		printf("%s: entry\n", __func__);
+	file = fopen(name, "rb");
+	if (!file) {
+		fprintf(stderr, "Unable to open file '%s'\n", name);
+		exit(EXIT_FAILURE);
+	}
+
+	if (parse_pcm_header(&file, &channels, &rate, &bits) == -1){
+		fprintf(stderr, "invalid header\n");
+		exit(EXIT_FAILURE);
+	}
+
+	codec.id = SND_AUDIOCODEC_PCM;
+	codec.ch_in = channels;
+	codec.ch_out = channels;
+	codec.sample_rate = compress_get_alsa_rate(rate);
+	if (!codec.sample_rate) {
+		fprintf(stderr, "invalid sample rate %d\n", rate);
+		fclose(file);
+		exit(EXIT_FAILURE);
+	}
+	codec.bit_rate = bits;
+	codec.rate_control = 0;
+	codec.profile = 0;
+	codec.level = 0;
+	codec.ch_mode = 0;
+	if (bits == 16) {
+		codec.format = SNDRV_PCM_FORMAT_S16_LE;
+	} else if (bits == 24) {
+		codec.format = SNDRV_PCM_FORMAT_S24_LE;
+	} else {
+		fprintf(stderr, "invalid bit rate %d\n", bits);
+		fclose(file);
+		exit(EXIT_FAILURE);
+	}
+
+	if ((buffer_size != 0) && (frag != 0)) {
+		/* Make sure the buffer size and fragments are multiple of 2, or 24 for multi channel*/
+		unsigned int temp_size = (channels > 2)? 24 : 2;
+		while (temp_size < buffer_size)
+			temp_size *= 2;
+		buffer_size = temp_size;
+
+		unsigned int temp_frag = 1;
+		while (temp_frag < frag)
+			temp_frag *= 2;
+
+		config.fragment_size = temp_size/temp_frag;
+		config.fragments = temp_frag;
+	} else {
+		/* Now set to suggested value. set to 0 for using driver defaults */
+		config.fragment_size = (channels > 2)? 12288 : 8192;
+		config.fragments = 4;
+	}
+	if (verbose)
+		printf("%s: Buffer size: %d Fragment size: %d Fragments: %d\n",
+		       __func__, config.fragment_size * config.fragments,
+		       config.fragment_size, config.fragments);
+
+	config.codec = &codec;
+
+	compress = compress_open(card, device, COMPRESS_IN, &config);
+	if (!compress || !is_compress_ready(compress)) {
+		fprintf(stderr, "Unable to open Compress device %d:%d\n",
+			card, device);
+		fprintf(stderr, "ERR: %s\n", compress_get_error(compress));
+		goto FILE_EXIT;
+	};
+	if (verbose)
+		printf("%s: Opened compress device\n", __func__);
+	frag_size = config.fragment_size;
+	printf("frag_size %d frags %d", frag_size, config.fragments);
+	buffer = malloc(frag_size * config.fragments);
+	if (!buffer) {
+		fprintf(stderr, "Unable to allocate %d bytes\n", frag_size);
+		goto COMP_EXIT;
+	}
+
+	/* we will write frag fragment_size and then start */
+	num_read = readFromFile2Buffer(buffer, &file, frag_size * config.fragments, bits);
+	/*Zero padded each 3 byte into 4 byte, the number read must be greater than size / 4 */
+	if (num_read > ((bits == 16)? 0 : frag_size * (int)config.fragments / 4)) {
+		if (verbose)
+			printf("%s: Doing first buffer write of %d\n", __func__, num_read);
+		wrote = compress_write(compress, buffer, num_read);
+		if (wrote < 0) {
+			fprintf(stderr, "Error %d playing sample\n", wrote);
+			fprintf(stderr, "ERR: %s\n", compress_get_error(compress));
+			goto BUF_EXIT;
+		}
+		if (wrote != num_read) {
+			/* TODO: Buufer pointer needs to be set here */
+			fprintf(stderr, "We wrote %d, DSP accepted %d\n", num_read, wrote);
+		}
+	}
+	printf("Playing file %s On Card %u device %u, with buffer of %lu bytes\n",
+	       name, card, device, buffer_size);
+	printf("Format %u Channels %u, %u Hz, Bit Rate %d\n",
+	       SND_AUDIOCODEC_MP3, channels, rate, bits);
+
+	compress_start(compress);
+	if (verbose)
+		printf("%s: You should hear audio NOW!!!\n", __func__);
+
+	do {
+		num_read = readFromFile2Buffer(buffer, &file, frag_size, bits);
+		if (num_read > ((bits == 16)? 0 : frag_size / 4)) {
+			wrote = compress_write(compress, buffer, num_read);
+			if (wrote < 0) {
+				fprintf(stderr, "Error playing sample\n");
+				fprintf(stderr, "ERR: %s\n", compress_get_error(compress));
+				goto BUF_EXIT;
+			}
+			if (wrote != num_read) {
+				/* TODO: Buffer pointer needs to be set here */
+				fprintf(stderr, "We wrote %d, DSP accepted %d\n", num_read, wrote);
+			}
+			if (verbose) {
+				print_time(compress);
+				printf("%s: wrote %d\n", __func__, wrote);
+			}
+		}
+	} while ((!feof(file)));
 
 	if (verbose)
 		printf("%s: exit success\n", __func__);
