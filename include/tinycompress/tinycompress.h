@@ -290,4 +290,10 @@ const char *compress_get_error(struct compress *compress);
 
 /* utility functions */
 unsigned int compress_get_alsa_rate(unsigned int rate);
+
+
+#if defined(__cplusplus)
+}
+#endif
+
 #endif
