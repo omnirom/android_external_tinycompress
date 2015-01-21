@@ -74,6 +74,8 @@ struct compr_config {
 struct compr_gapless_mdata {
 	__u32 encoder_delay;
 	__u32 encoder_padding;
+	__u32 min_blk_size;
+	__u32 max_blk_size;
 };
 
 #define COMPRESS_OUT        0x20000000

@@ -568,6 +568,16 @@ int compress_set_gapless_metadata(struct compress *compress,
 	metadata.value[0] = mdata->encoder_delay;
 	if (ioctl(compress->fd, SNDRV_COMPRESS_SET_METADATA, &metadata))
 		return oops(compress, errno, "can't set metadata for stream\n");
+
+	metadata.key = SNDRV_COMPRESS_MIN_BLK_SIZE;
+	metadata.value[0] = mdata->min_blk_size;
+	if (ioctl(compress->fd, SNDRV_COMPRESS_SET_METADATA, &metadata))
+		return oops(compress, errno, "can't set metadata for stream\n");
+
+	metadata.key = SNDRV_COMPRESS_MAX_BLK_SIZE;
+	metadata.value[0] = mdata->max_blk_size;
+	if (ioctl(compress->fd, SNDRV_COMPRESS_SET_METADATA, &metadata))
+		return oops(compress, errno, "can't set metadata for stream\n");
 	compress->gapless_metadata = 1;
 	return 0;
 }
