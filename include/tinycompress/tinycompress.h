@@ -236,6 +236,7 @@ int compress_partial_drain(struct compress *compress);
 int compress_set_gapless_metadata(struct compress *compress,
 			struct compr_gapless_mdata *mdata);
 
+#ifdef SNDRV_COMPRESS_SET_NEXT_TRACK_PARAM
 /*
  * compress_set_next_track_param: set params of next compress stream in gapless
  *
@@ -247,6 +248,7 @@ int compress_set_gapless_metadata(struct compress *compress,
 
 int compress_set_next_track_param(struct compress *compress,
 			union snd_codec_options *codec_options);
+#endif
 
 /*
  * is_codec_supported:check if the given codec is supported
