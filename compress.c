@@ -572,7 +572,7 @@ int compress_set_gapless_metadata(struct compress *compress,
 	compress->gapless_metadata = 1;
 	return 0;
 }
-
+#ifdef QCOM_HARDWARE 
 int compress_set_next_track_param(struct compress *compress,
 	union snd_codec_options *codec_options)
 {
@@ -583,6 +583,7 @@ int compress_set_next_track_param(struct compress *compress,
 		return oops(compress, errno, "cannot set next track params\n");
 	return 0;
 }
+#endif
 
 bool is_codec_supported(unsigned int card, unsigned int device,
 		unsigned int flags, struct snd_codec *codec)
