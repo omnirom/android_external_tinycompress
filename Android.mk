@@ -7,6 +7,10 @@ LOCAL_MODULE := libtinycompress
 LOCAL_SHARED_LIBRARIES:= libcutils libutils
 LOCAL_MODULE_TAGS := optional
 
+ifeq ($(strip $(SNDRV_COMPRESS_SET_NEXT_TRACK_PARAM)),true)
+    LOCAL_CFLAGS += -DSNDRV_COMPRESS_SET_NEXT_TRACK_PARAM
+endif
+
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
