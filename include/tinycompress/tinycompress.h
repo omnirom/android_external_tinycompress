@@ -82,6 +82,7 @@ struct compr_gapless_mdata {
 struct compress;
 struct snd_compr_tstamp;
 union snd_codec_options;
+struct snd_compr_metadata;
 
 /*
  * compress_open: open a new compress stream
@@ -304,6 +305,13 @@ const char *compress_get_error(struct compress *compress);
 /* utility functions */
 unsigned int compress_get_alsa_rate(unsigned int rate);
 
+/* set metadata */
+int compress_set_metadata(struct compress *compress,
+	    struct snd_compr_metadata *mdata);
+
+/* get metadata */
+int compress_get_metadata(struct compress *compress,
+	    struct snd_compr_metadata *mdata);
 
 #if defined(__cplusplus)
 }
