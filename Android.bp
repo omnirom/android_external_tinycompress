@@ -1,6 +1,6 @@
 cc_library_shared {
     name: "libtinycompress",
-
+    vendor_available: true,
     cflags: ["-Wno-macro-redefined"],
     export_include_dirs: ["include"],
     srcs: [
