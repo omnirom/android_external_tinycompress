@@ -641,3 +641,35 @@ int compress_wait(struct compress *compress, int timeout_ms)
 	return oops(compress, EIO, "poll signalled unhandled event");
 }
 
+int compress_get_metadata(struct compress *compress,
+		struct snd_compr_metadata *mdata) {
+	int version;
+	if (!is_compress_ready(compress))
+		return oops(compress, ENODEV, "device not ready");
+
+	version = get_compress_version(compress);
+	if (version <= 0)
+		return -1;
+
+	if (ioctl(compress->fd, SNDRV_COMPRESS_GET_METADATA, mdata)) {
+		return oops(compress, errno, "can't get metadata for stream\n");
+	}
+	return 0;
+}
+
+int compress_set_metadata(struct compress *compress,
+		struct snd_compr_metadata *mdata) {
+
+	int version;
+	if (!is_compress_ready(compress))
+		return oops(compress, ENODEV, "device not ready");
+
+	version = get_compress_version(compress);
+	if (version <= 0)
+		return -1;
+
+	if (ioctl(compress->fd, SNDRV_COMPRESS_SET_METADATA, mdata)) {
+		return oops(compress, errno, "can't set metadata for stream\n");
+	}
+	return 0;
+}
