@@ -246,8 +246,10 @@ int compress_set_gapless_metadata(struct compress *compress,
  * @codec_options: codec options of compress stream based on codec type
  */
 
+#ifdef USE_VENDOR_EXTN
 int compress_set_next_track_param(struct compress *compress,
 			union snd_codec_options *codec_options);
+#endif
 
 /*
  * is_codec_supported:check if the given codec is supported
