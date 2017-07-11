@@ -16,12 +16,12 @@ LOCAL_VENDOR_MODULE := true
 include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
-
 LOCAL_CFLAGS := -Wno-macro-redefined
 LOCAL_C_INCLUDES:= $(LOCAL_PATH)/include
 LOCAL_SRC_FILES:= cplay.c
 LOCAL_MODULE := cplay
 LOCAL_SHARED_LIBRARIES:= libcutils libutils libtinycompress
+LOCAL_VENDOR_MODULE := true
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_EXECUTABLE)
