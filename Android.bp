@@ -26,7 +26,10 @@ cc_library_shared {
     name: "libtinycompress_vendor",
     vendor: true,
 
-    cflags: ["-Wno-macro-redefined"],
+    cflags: [
+	"-Wno-macro-redefined",
+	"-Wno-unused-function"
+],
     export_include_dirs: ["include"],
     srcs: [
         "compress.c",
