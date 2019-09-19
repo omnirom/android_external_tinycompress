@@ -29,7 +29,10 @@ cc_library_shared {
         "-Werror",
         "-Wno-macro-redefined",
         "-Wno-unused-function",
-    ],
+    ] + select(soong_config_variable("qtiaudio", "feature_extended_compress_format"), {
+        "true": ["-DENABLE_EXTENDED_COMPRESS_FORMAT"],
+        default: [],
+    }),
     export_include_dirs: ["include"],
     srcs: [
         "compress.c",
