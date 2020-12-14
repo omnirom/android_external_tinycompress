@@ -579,8 +579,13 @@ int compress_set_next_track_param(struct compress *compress,
 	if (!is_compress_running(compress))
 		return oops(compress, ENODEV, "device not ready");
 
+	if (codec_options == NULL)
+		return oops(compress, ENODEV, "codec_option NULL");
+
+#ifdef SNDRV_COMPRESS_SET_NEXT_TRACK_PARAM
 	if (ioctl(compress->fd, SNDRV_COMPRESS_SET_NEXT_TRACK_PARAM, codec_options))
 		return oops(compress, errno, "cannot set next track params\n");
+#endif
 	return 0;
 }
 #endif
