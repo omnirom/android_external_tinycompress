@@ -366,14 +366,15 @@ static int compress_plug_open(unsigned int card, unsigned int device,
 		fprintf(stderr, "%s: invalid library name\n", __func__);
 		goto err_open_fn;
 	}
-	open_fn = calloc(1, strlen(name) + strlen("_open") + 1);
+	const size_t open_fn_size = strlen(name) + strlen("_open") + 1;
+	open_fn = calloc(1, open_fn_size);
 	if (!open_fn) {
 		rc = -ENOMEM;
 		goto err_open_fn;
 	}
 
-	strlcpy(open_fn, name, strlen(name) + 1);
-	strlcat(open_fn, "_open", strlen(name) + strlen("_open") + 1);
+	strlcpy(open_fn, name, open_fn_size);
+	strlcat(open_fn, "_open", open_fn_size);
 
 	plug_data->plugin_open_fn = dlsym(dl_hdl, open_fn);
 	if (!plug_data->plugin_open_fn) {
