@@ -1,6 +1,6 @@
 /* compress_plugin.c
 **
-** Copyright (c) 2019, The Linux Foundation. All rights reserved.
+** Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
 ** modification, are permitted provided that the following conditions are
@@ -333,10 +333,9 @@ static int compress_plug_open(unsigned int card, unsigned int device,
 			unsigned int flags, void **data, void *node)
 {
 	struct compress_plug_data *plug_data;
-	const char *err = NULL;
 	void *dl_hdl;
 	int rc = 0;
-	char *so_name, *open_fn, token[80], *name;
+	char *so_name, *open_fn, token[80], *name, *token_saveptr;
 
 	plug_data = calloc(1, sizeof(*plug_data));
 	if (!plug_data) {
@@ -361,22 +360,25 @@ static int compress_plug_open(unsigned int card, unsigned int device,
 	}
 
 	sscanf(so_name, "lib%s", token);
-	name = strtok(token, ".");
+	token_saveptr = token;
+	name = strtok_r(token, ".", &token_saveptr);
+	if (!name) {
+		fprintf(stderr, "%s: invalid library name\n", __func__);
+		goto err_open_fn;
+	}
 	open_fn = calloc(1, strlen(name) + strlen("_open") + 1);
 	if (!open_fn) {
 		rc = -ENOMEM;
 		goto err_open_fn;
 	}
 
-	strncpy(open_fn, name, strlen(name) + 1);
-	strcat(open_fn, "_open");
+	strlcpy(open_fn, name, strlen(name) + 1);
+	strlcat(open_fn, "_open", strlen(name) + strlen("_open") + 1);
 
 	plug_data->plugin_open_fn = dlsym(dl_hdl, open_fn);
-	err = dlerror();
-
-	if (err) {
+	if (!plug_data->plugin_open_fn) {
 		fprintf(stderr, "%s: dlsym to open fn failed, err = '%s'\n",
-				__func__, err);
+				__func__, dlerror());
 		goto err_dlsym;
 	}
 
