@@ -12,6 +12,9 @@ cc_library_shared {
     srcs: [
         "compress.c",
         "utils.c",
+        "compress_hw.c",
+         "compress_plugin.c",
+         "snd_utils.c",
     ],
     shared_libs: [
         "libcutils",
