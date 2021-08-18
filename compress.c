@@ -619,6 +619,23 @@ int compress_wait(struct compress *compress, int timeout_ms)
 	return oops(compress, EIO, "poll signalled unhandled event");
 }
 
+int compress_set_codec_params(struct compress *compress,
+	struct snd_codec *codec) {
+	struct snd_compr_params params;
+
+	if (!is_compress_running(compress))
+		return oops(compress, ENODEV, "device not ready");
+
+	params.buffer.fragment_size = compress->config->fragment_size;
+	params.buffer.fragments = compress->config->fragments;
+	memcpy(&params.codec, codec, sizeof(params.codec));
+
+	if (compress->ops->ioctl(compress->data, SNDRV_COMPRESS_SET_PARAMS, &params))
+		return oops(compress, errno, "cannot set device");
+
+	return 0;
+}
+
 #ifdef ENABLE_EXTENDED_COMPRESS_FORMAT
 int compress_get_metadata(struct compress *compress,
 		struct snd_compr_metadata *mdata) {
