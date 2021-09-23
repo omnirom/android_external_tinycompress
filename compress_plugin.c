@@ -86,7 +86,8 @@ static int compress_plug_set_params(struct compress_plug_data *plug_data,
 
 	if (plugin->state == COMPRESS_PLUG_STATE_RUNNING)
 		return plugin->ops->set_params(plugin, params);
-	else if (plugin->state != COMPRESS_PLUG_STATE_OPEN)
+	else if (plugin->state != COMPRESS_PLUG_STATE_OPEN &&
+		plugin->state != COMPRESS_PLUG_STATE_SETUP)
 		return -EBADFD;
 
 	if (params->buffer.fragment_size == 0 ||
