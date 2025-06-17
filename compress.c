@@ -623,16 +623,18 @@ int compress_set_codec_params(struct compress *compress,
 	struct snd_codec *codec) {
 	struct snd_compr_params params;
 
-	if (!is_compress_running(compress))
+	if (!is_compress_ready(compress) || !compress->next_track)
 		return oops(compress, ENODEV, "device not ready");
 
 	params.buffer.fragment_size = compress->config->fragment_size;
 	params.buffer.fragments = compress->config->fragments;
 	memcpy(&params.codec, codec, sizeof(params.codec));
+	memcpy(&compress->config->codec, codec, sizeof(struct snd_codec));
 
 	if (compress->ops->ioctl(compress->data, SNDRV_COMPRESS_SET_PARAMS, &params))
 		return oops(compress, errno, "cannot set device");
 
+	compress->next_track = 0;
 	return 0;
 }
 

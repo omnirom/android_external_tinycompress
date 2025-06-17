@@ -1,3 +1,4 @@
 cferris@google.com
 dvdli@google.com
 elaurent@google.com
+include platform/system/core:/janitors/OWNERS #{LAST_RESORT_SUGGESTION}
